@@ -20,11 +20,22 @@ type HistoryResponse = {
   ticker: string;
   data: PriceRecord[];
 };
+ 
+
+type PerformanceResponse = {
+  ticker: string;
+  start_price?: number;
+  end_price?: number;
+  period_return_pct?: number;
+  error?: string;
+};
 
 function App() {
   const [ticker, setTicker] = useState("TCS.NS");
   const [history, setHistory] = useState<PriceRecord[]>([]);
   const [loadedTicker, setLoadedTicker] = useState("");
+  const [performance, setPerformance] =
+    useState<PerformanceResponse | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
@@ -40,6 +51,7 @@ function App() {
     setError("");
     setHistory([]);
     setLoadedTicker("");
+    setPerformance(null);
 
     try {
       const response = await fetch(
@@ -71,6 +83,45 @@ function App() {
 
       setHistory(records);
       setLoadedTicker(result.ticker);
+
+
+try {
+  // Your existing history fetch and processing code...
+
+  setHistory(records);
+  setLoadedTicker(result.ticker);
+
+  // Performance fetch goes here!
+  const performanceResponse = await fetch(
+    `http://127.0.0.1:8000/api/stocks/${encodeURIComponent(symbol)}/performance`
+  );
+
+  if (!performanceResponse.ok) {
+    throw new Error("Could not retrieve performance data.");
+  }
+
+  const performanceResult: PerformanceResponse =
+    await performanceResponse.json();
+
+  if (
+    performanceResult.error ||
+    !Number.isFinite(performanceResult.period_return_pct) ||
+    !Number.isFinite(performanceResult.end_price) ||
+    !Number.isFinite(performanceResult.start_price)
+  ) {
+    throw new Error(
+      performanceResult.error ?? "Invalid performance data returned."
+    );
+  }
+
+  setPerformance(performanceResult);
+
+} catch (err) {
+  // Keep your existing error-handling code here.
+} finally {
+  // Keep your existing loading-state code here.
+}
+
     } catch (err) {
       setError(
         err instanceof Error
@@ -81,6 +132,10 @@ function App() {
       setLoading(false);
     }
   }
+
+
+
+
 
   return (
     <div className="app">
@@ -148,6 +203,45 @@ function App() {
                 </strong>
               </div>
             </div>
+            
+{performance && (
+  <div className="metrics-grid">
+    <div className="metric-card">
+      <span>Period return</span>
+      <strong
+        className={
+          performance.period_return_pct! >= 0
+            ? "positive"
+            : "negative"
+        }
+      >
+        {performance.period_return_pct! > 0 ? "+" : ""}
+        {performance.period_return_pct!.toFixed(2)}%
+      </strong>
+      <small>Over the last month</small>
+    </div>
+
+    <div className="metric-card">
+      <span>Starting close</span>
+      <strong>
+        ₹{performance.start_price!.toLocaleString("en-IN", {
+          maximumFractionDigits: 2,
+        })}
+      </strong>
+      <small>First available observation</small>
+    </div>
+
+    <div className="metric-card">
+      <span>Latest close</span>
+      <strong>
+        ₹{performance.end_price!.toLocaleString("en-IN", {
+          maximumFractionDigits: 2,
+        })}
+      </strong>
+      <small>Last available observation</small>
+    </div>
+  </div>
+)}
 
             <p className="hint">
               Historical closing prices · {history.length} records

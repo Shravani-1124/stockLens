@@ -262,3 +262,46 @@ footer {
   }
 }
 
+.metrics-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+  margin: 28px 0;
+}
+
+.metric-card {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 22px;
+  background: #111722;
+  border: 1px solid #293246;
+  border-radius: 12px;
+  min-width: 0;
+}
+
+.metric-card span,
+.metric-card small {
+  color: #8c97aa;
+  font-size: 13px;
+}
+
+.metric-card strong {
+  font-size: clamp(18px, 2vw, 26px);
+  overflow-wrap: anywhere;
+}
+
+.metric-card .positive {
+  color: #4ade80;
+}
+
+.metric-card .negative {
+  color: #f87171;
+}
+
+@media (max-width: 650px) {
+  .metrics-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
