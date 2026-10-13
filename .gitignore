@@ -1,0 +1,46 @@
+
+# ==============================
+# Python
+# ==============================
+__pycache__/
+*.py[cod]
+*.pyo
+.venv/
+venv/
+env/
+
+# ==============================
+# Environment variables & secrets
+# ==============================
+.env
+.env.*
+!.env.example
+
+# ==============================
+# Node.js / React
+# ==============================
+node_modules/
+frontend/dist/
+frontend/.vite/
+
+# ==============================
+# Testing & coverage
+# ==============================
+.pytest_cache/
+.coverage
+htmlcov/
+
+# ==============================
+# Editors & operating system
+# ==============================
+.vscode/
+.idea/
+.DS_Store
+*.swp
+*.swo
+
+# ==============================
+# Logs
+# ==============================
+*.log
+npm-debug.log*
