@@ -27,6 +27,8 @@ type PerformanceResponse = {
   start_price?: number;
   end_price?: number;
   period_return_pct?: number;
+  annualised_volatility_pct?: number;
+  max_drawdown_pct?: number;
   error?: string;
 };
 
@@ -104,15 +106,17 @@ try {
     await performanceResponse.json();
 
   if (
-    performanceResult.error ||
-    !Number.isFinite(performanceResult.period_return_pct) ||
-    !Number.isFinite(performanceResult.end_price) ||
-    !Number.isFinite(performanceResult.start_price)
-  ) {
-    throw new Error(
-      performanceResult.error ?? "Invalid performance data returned."
-    );
-  }
+  performanceResult.error ||
+  !Number.isFinite(performanceResult.period_return_pct) ||
+  !Number.isFinite(performanceResult.end_price) ||
+  !Number.isFinite(performanceResult.start_price) ||
+  !Number.isFinite(performanceResult.annualised_volatility_pct) ||
+  !Number.isFinite(performanceResult.max_drawdown_pct)
+) {
+  throw new Error(
+    performanceResult.error ?? "Invalid performance data returned."
+  );
+}
 
   setPerformance(performanceResult);
 
@@ -240,6 +244,25 @@ try {
       </strong>
       <small>Last available observation</small>
     </div>
+    <div className="metric-card">
+  <p className="metric-label">Annualised Volatility</p>
+  <h3>
+    {performance.annualised_volatility_pct!.toFixed(2)}%
+  </h3>
+  <p className="hint">
+    Annualised variability of daily returns
+  </p>
+</div>
+
+<div className="metric-card">
+  <p className="metric-label">Maximum Drawdown</p>
+  <h3 className="negative">
+    {performance.max_drawdown_pct!.toFixed(2)}%
+  </h3>
+  <p className="hint">
+    Largest peak-to-trough decline
+  </p>
+</div>
   </div>
 )}
 

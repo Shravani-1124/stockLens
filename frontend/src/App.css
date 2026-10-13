@@ -264,9 +264,10 @@ footer {
 
 .metrics-grid {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 16px;
-  margin: 28px 0;
+  grid-template-columns: repeat(
+  auto-fit,
+  minmax(160px, 1fr)
+);
 }
 
 .metric-card {
