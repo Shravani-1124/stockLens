@@ -8,6 +8,9 @@ import {
   Tooltip,
   XAxis,
   YAxis,
+  Bar,
+  BarChart,
+  ReferenceLine,
 } from "recharts";
 import "./App.css";
 
@@ -32,12 +35,27 @@ type PerformanceResponse = {
   error?: string;
 };
 
+
+type DailyReturnRecord = {
+  date: string;
+  daily_return_pct: number;
+};
+
+type DailyReturnsResponse = {
+  ticker: string;
+  data: DailyReturnRecord[];
+};
+
 function App() {
   const [ticker, setTicker] = useState("TCS.NS");
   const [history, setHistory] = useState<PriceRecord[]>([]);
   const [loadedTicker, setLoadedTicker] = useState("");
   const [performance, setPerformance] =
     useState<PerformanceResponse | null>(null);
+  
+  const [dailyReturns, setDailyReturns] = 
+    useState<DailyReturnRecord[]>([]);
+
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
@@ -54,7 +72,7 @@ function App() {
     setHistory([]);
     setLoadedTicker("");
     setPerformance(null);
-
+    setDailyReturns([]);
     try {
       const response = await fetch(
         `http://127.0.0.1:8000/api/stocks/${encodeURIComponent(symbol)}/history`
@@ -119,6 +137,20 @@ try {
 }
 
   setPerformance(performanceResult);
+
+const returnsResponse = await fetch(
+  `http://127.0.0.1:8000/api/stocks/${encodeURIComponent(symbol)}/daily-returns`
+);
+
+if (!returnsResponse.ok) {
+  throw new Error("Could not retrieve daily returns.");
+}
+
+const returnsResult: DailyReturnsResponse =
+  await returnsResponse.json();
+
+setDailyReturns(returnsResult.data);
+
 
 } catch (err) {
   // Keep your existing error-handling code here.
@@ -332,6 +364,58 @@ try {
             </div>
           </section>
         )}
+        
+{dailyReturns.length > 0 && (
+  <section className="chart-section">
+    <h2>Daily Returns</h2>
+    <p className="hint">
+      Percentage change from the previous trading day's close
+    </p>
+
+    <div className="chart-container">
+      <ResponsiveContainer width="100%" height={300}>
+        <BarChart data={dailyReturns}>
+          <CartesianGrid
+            strokeDasharray="3 3"
+            stroke="#293246"
+          />
+
+          <XAxis
+            dataKey="date"
+            stroke="#94a3b8"
+            tick={{ fontSize: 11 }}
+          />
+
+          <YAxis
+            stroke="#94a3b8"
+            tick={{ fontSize: 11 }}
+            tickFormatter={(value) => `${value}%`}
+          />
+
+          <Tooltip
+            formatter={(value) => [
+              `${Number(value).toFixed(2)}%`,
+              "Daily return",
+            ]}
+            contentStyle={{
+              backgroundColor: "#111722",
+              border: "1px solid #293246",
+              borderRadius: "8px",
+            }}
+          />
+
+          <ReferenceLine y={0} stroke="#94a3b8" />
+
+          <Bar
+            dataKey="daily_return_pct"
+            fill="#a5b4fc"
+            radius={[3, 3, 0, 0]}
+          />
+        </BarChart>
+      </ResponsiveContainer>
+    </div>
+  </section>
+)}
 
         {!loading && history.length === 0 && !error && (
           <section className="empty-state">

@@ -96,3 +96,37 @@ def get_stock_performance(ticker: str):
         ),
         "max_drawdown_pct": round(max_drawdown, 2),
     }
+
+@app.get("/api/stocks/{ticker}/daily-returns")
+def get_daily_returns(ticker: str):
+    stock = yf.Ticker(ticker)
+    history = stock.history(period="1mo")
+
+    if history.empty:
+        raise HTTPException(
+            status_code=404,
+            detail="No historical data found for this ticker.",
+        )
+
+    # Keep only valid closing prices.
+    history = history.dropna(subset=["Close"])
+    prices = history["Close"].tolist()
+
+    if len(prices) < 2:
+        raise HTTPException(
+            status_code=422,
+            detail="At least two valid closing prices are required.",
+        )
+
+    daily_returns = calculate_daily_returns(prices)
+
+    return {
+        "ticker": ticker.upper(),
+        "data": [
+            {
+                "date": history.index[i].strftime("%Y-%m-%d"),
+                "daily_return_pct": round(daily_returns[i - 1], 4),
+            }
+            for i in range(1, len(prices))
+        ],
+    }
