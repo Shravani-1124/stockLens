@@ -12,6 +12,9 @@ import {
   BarChart,
   ReferenceLine,
   Legend,
+  PieChart,
+  Pie,
+  Cell,
 } from "recharts";
 import "./App.css";
 
@@ -93,7 +96,6 @@ type PortfolioResponse = {
 
 
 
-
 function App() {
   const [ticker, setTicker] = useState("TCS.NS");
   const [history, setHistory] = useState<PriceRecord[]>([]);
@@ -109,6 +111,30 @@ function App() {
 
 const [holdings, setHoldings] = useState<PortfolioHoldingInput[]>([]);
 const [portfolio, setPortfolio] = useState<PortfolioResponse | null>(null);
+
+const allocationColors = [
+  "#a5b4fc",
+  "#4ade80",
+  "#fbbf24",
+  "#f87171",
+  "#38bdf8",
+  "#c084fc",
+  "#fb923c",
+];
+
+const allocationData = portfolio
+  ? portfolio.holdings.map((holding) => ({
+      ticker: holding.ticker,
+      value: holding.current_value,
+      percentage:
+        portfolio.summary.total_current_value > 0
+          ? (holding.current_value /
+              portfolio.summary.total_current_value) *
+            100
+          : 0,
+    }))
+  : [];
+
 
 const [newTicker, setNewTicker] = useState("TCS.NS");
 const [newQuantity, setNewQuantity] = useState("10");
@@ -519,6 +545,45 @@ setDailyReturns(returnsResult.data);
           </strong>
         </div>
       </div>
+     
+
+<h3>Portfolio Allocation</h3>
+<p className="hint">
+  Distribution of your portfolio by current market value.
+</p>
+
+<div className="chart-container">
+  <ResponsiveContainer width="100%" height={300}>
+    <PieChart>
+      <Pie
+        data={allocationData}
+        dataKey="value"
+        nameKey="ticker"
+        cx="50%"
+        cy="50%"
+        outerRadius={100}
+        label={({ name, percent }: {
+  name?: string;
+  percent?: number;
+}) => `${name ?? ""}: ${((percent ?? 0) * 100).toFixed(1)}%`}
+      >
+        {allocationData.map((entry, index) => (
+          <Cell
+            key={entry.ticker}
+            fill={allocationColors[index % allocationColors.length]}
+          />
+        ))}
+      </Pie>
+      <Tooltip
+        formatter={(value) => [
+          `₹${Number(value).toLocaleString("en-IN")}`,
+          "Current value",
+        ]}
+      />
+      <Legend />
+    </PieChart>
+  </ResponsiveContainer>
+</div>
 
       <h3>Holding Performance</h3>
       <div className="comparison-results">
