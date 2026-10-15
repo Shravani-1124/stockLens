@@ -17,6 +17,7 @@ import {
   Cell,
 } from "recharts";
 import "./App.css";
+import AnalyticsPanel from "./AnalyticsPanel";
 
 type PriceRecord = {
   Date: string;
@@ -992,6 +993,7 @@ setDailyReturns(returnsResult.data);
             </p>
           </section>
         )}
+        <AnalyticsPanel />
       </main>
 
       <footer>
