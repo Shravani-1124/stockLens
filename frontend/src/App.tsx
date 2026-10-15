@@ -68,6 +68,31 @@ type ComparisonResponse = {
   stock2: ComparedStock;
 };
 
+type PortfolioHoldingInput = {
+  ticker: string;
+  quantity: number;
+  purchase_price: number;
+  current_price: number;
+};
+
+type PortfolioHolding = PortfolioHoldingInput & {
+  invested_amount: number;
+  current_value: number;
+  profit_loss: number;
+  return_pct: number;
+};
+
+type PortfolioResponse = {
+  holdings: PortfolioHolding[];
+  summary: {
+    total_invested: number;
+    total_current_value: number;
+    total_profit_loss: number;
+    total_return_pct: number;
+  };
+};
+
+
 
 
 function App() {
@@ -83,11 +108,105 @@ function App() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
+const [holdings, setHoldings] = useState<PortfolioHoldingInput[]>([]);
+const [portfolio, setPortfolio] = useState<PortfolioResponse | null>(null);
+
+const [newTicker, setNewTicker] = useState("TCS.NS");
+const [newQuantity, setNewQuantity] = useState("10");
+const [newPurchasePrice, setNewPurchasePrice] = useState("");
+const [newCurrentPrice, setNewCurrentPrice] = useState("");
+
+const [portfolioLoading, setPortfolioLoading] = useState(false);
+const [portfolioError, setPortfolioError] = useState("");
+
+
 
 const [ticker2, setTicker2] = useState("RELIANCE.NS");
 const [comparison, setComparison] =
   useState<ComparisonResponse | null>(null);
 
+function addHolding() {
+  const symbol = newTicker.trim().toUpperCase();
+  const quantity = Number(newQuantity);
+  const purchasePrice = Number(newPurchasePrice);
+  const currentPrice = Number(newCurrentPrice);
+
+  if (!symbol || !newPurchasePrice || !newCurrentPrice) {
+    setPortfolioError("Please fill in all holding fields.");
+    return;
+  }
+
+  if (
+    !Number.isInteger(quantity) ||
+    quantity <= 0 ||
+    !Number.isFinite(purchasePrice) ||
+    purchasePrice <= 0 ||
+    !Number.isFinite(currentPrice) ||
+    currentPrice <= 0
+  ) {
+    setPortfolioError(
+      "Enter a positive whole-number quantity and positive prices."
+    );
+    return;
+  }
+
+  const updatedHoldings = [
+    ...holdings,
+    {
+      ticker: symbol,
+      quantity,
+      purchase_price: purchasePrice,
+      current_price: currentPrice,
+    },
+  ];
+
+  setHoldings(updatedHoldings);
+  setPortfolio(null);
+  setPortfolioError("");
+  setNewTicker("");
+  setNewQuantity("10");
+  setNewPurchasePrice("");
+  setNewCurrentPrice("");
+}
+
+
+async function analysePortfolio() {
+  if (holdings.length === 0) {
+    setPortfolioError("Please add at least one holding.");
+    return;
+  }
+
+  setPortfolioLoading(true);
+  setPortfolioError("");
+
+  try {
+    const response = await fetch(
+      "http://127.0.0.1:8000/api/portfolio/analyse",
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(holdings),
+      }
+    );
+
+    if (!response.ok) {
+      throw new Error("Could not analyse your portfolio.");
+    }
+
+    const result: PortfolioResponse = await response.json();
+    setPortfolio(result);
+  } catch (err) {
+    setPortfolioError(
+      err instanceof Error
+        ? err.message
+        : "Something went wrong while analysing your portfolio."
+    );
+  } finally {
+    setPortfolioLoading(false);
+  }
+}
 
 async function compareStocks() {
   const symbol1 = ticker.trim().toUpperCase();
@@ -282,6 +401,166 @@ setDailyReturns(returnsResult.data);
       </header>
 
       <main className="main-content">
+
+<section className="comparison-panel">
+  <h2>Portfolio Analytics</h2>
+  <p className="hint">
+    Add your holdings to calculate investment performance.
+  </p>
+
+  <div className="comparison-inputs">
+    <div>
+      <label htmlFor="portfolio-ticker">Stock ticker</label>
+      <input
+        id="portfolio-ticker"
+        value={newTicker}
+        onChange={(event) => setNewTicker(event.target.value)}
+        placeholder="e.g. TCS.NS"
+      />
+    </div>
+
+    <div>
+      <label htmlFor="portfolio-quantity">Quantity</label>
+      <input
+        id="portfolio-quantity"
+        type="number"
+        min="1"
+        step="1"
+        value={newQuantity}
+        onChange={(event) => setNewQuantity(event.target.value)}
+      />
+    </div>
+
+    <div>
+      <label htmlFor="purchase-price">Purchase price (₹)</label>
+      <input
+        id="purchase-price"
+        type="number"
+        min="0.01"
+        step="any"
+        value={newPurchasePrice}
+        onChange={(event) => setNewPurchasePrice(event.target.value)}
+        placeholder="3000"
+      />
+    </div>
+
+    <div>
+      <label htmlFor="current-price">Current price (₹)</label>
+      <input
+        id="current-price"
+        type="number"
+        min="0.01"
+        step="any"
+        value={newCurrentPrice}
+        onChange={(event) => setNewCurrentPrice(event.target.value)}
+        placeholder="3500"
+      />
+    </div>
+  </div>
+
+  <div className="search-row">
+    <button onClick={addHolding}>Add holding</button>
+    <button
+      onClick={() => void analysePortfolio()}
+      disabled={portfolioLoading || holdings.length === 0}
+    >
+      {portfolioLoading ? "Analysing..." : "Analyse portfolio"}
+    </button>
+  </div>
+
+  {portfolioError && (
+    <p className="error-message" role="alert">{portfolioError}</p>
+  )}
+
+  {holdings.length > 0 && (
+    <div>
+      <h3>Your holdings</h3>
+      <div className="comparison-results">
+        {holdings.map((holding, index) => (
+          <div
+            className="comparison-result-card"
+            key={`${holding.ticker}-${index}`}
+          >
+            <h3>{holding.ticker}</h3>
+            <p>Quantity: {holding.quantity}</p>
+            <p>Purchase price: ₹{holding.purchase_price.toLocaleString("en-IN")}</p>
+            <p>Current price: ₹{holding.current_price.toLocaleString("en-IN")}</p>
+            <button
+              onClick={() => {
+                setHoldings(
+                  holdings.filter((_, holdingIndex) => holdingIndex !== index)
+                );
+                setPortfolio(null);
+                setPortfolioError("");
+              }}
+            >
+              Remove
+            </button>
+          </div>
+        ))}
+      </div>
+    </div>
+  )}
+
+  {portfolio && (
+    <>
+      <h3>Portfolio Summary</h3>
+      <div className="metrics-grid">
+        <div className="metric-card">
+          <span>Total invested</span>
+          <strong>
+            ₹{portfolio.summary.total_invested.toLocaleString("en-IN")}
+          </strong>
+        </div>
+
+        <div className="metric-card">
+          <span>Current value</span>
+          <strong>
+            ₹{portfolio.summary.total_current_value.toLocaleString("en-IN")}
+          </strong>
+        </div>
+
+        <div className="metric-card">
+          <span>Profit / Loss</span>
+          <strong className={portfolio.summary.total_profit_loss >= 0 ? "positive" : "negative"}>
+            ₹{portfolio.summary.total_profit_loss.toLocaleString("en-IN")}
+          </strong>
+        </div>
+
+        <div className="metric-card">
+          <span>Total return</span>
+          <strong className={portfolio.summary.total_return_pct >= 0 ? "positive" : "negative"}>
+            {portfolio.summary.total_return_pct.toFixed(2)}%
+          </strong>
+        </div>
+      </div>
+
+      <h3>Holding Performance</h3>
+      <div className="comparison-results">
+        {portfolio.holdings.map((holding, index) => (
+          <div className="comparison-result-card" key={`${holding.ticker}-${index}`}>
+            <h3>{holding.ticker}</h3>
+            <p>Invested: ₹{holding.invested_amount.toLocaleString("en-IN")}</p>
+            <p>Current value: ₹{holding.current_value.toLocaleString("en-IN")}</p>
+            <p>
+              Profit / Loss:{" "}
+              <strong className={holding.profit_loss >= 0 ? "positive" : "negative"}>
+                ₹{holding.profit_loss.toLocaleString("en-IN")}
+              </strong>
+            </p>
+            <p>
+              Return:{" "}
+              <strong className={holding.return_pct >= 0 ? "positive" : "negative"}>
+                {holding.return_pct.toFixed(2)}%
+              </strong>
+            </p>
+          </div>
+        ))}
+      </div>
+    </>
+  )}
+</section>
+
         <p className="eyebrow">MARKET RESEARCH / STOCK EXPLORER</p>
 
         <h1>Understand your stocks.</h1>
