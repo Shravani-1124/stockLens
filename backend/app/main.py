@@ -2,7 +2,10 @@ from fastapi import FastAPI, HTTPException
 import yfinance as yf
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
-from app.portfolio import calculate_holding_metrics
+from app.portfolio import (
+    calculate_holding_metrics,
+    get_latest_stock_price,
+)
 
 from app.metrics import (
     calculate_period_return,
@@ -28,8 +31,6 @@ class HoldingInput(BaseModel):
     ticker: str = Field(min_length=1)
     quantity: int = Field(gt=0)
     purchase_price: float = Field(gt=0)
-    current_price: float = Field(gt=0)
-
 
 @app.get("/")
 def home():
@@ -210,6 +211,7 @@ def compare_stocks(ticker1: str, ticker2: str):
         "stock2": second_stock,
     }
 
+
 @app.post("/api/portfolio/analyse")
 def analyse_portfolio(holdings: list[HoldingInput]):
     if not holdings:
@@ -219,15 +221,26 @@ def analyse_portfolio(holdings: list[HoldingInput]):
         )
 
     results = []
-    total_invested = 0
-    total_current_value = 0
+    total_invested = 0.0
+    total_current_value = 0.0
 
     for holding in holdings:
-        metrics = calculate_holding_metrics(
-            quantity=holding.quantity,
-            purchase_price=holding.purchase_price,
-            current_price=holding.current_price,
-        )
+        try:
+            current_price = get_latest_stock_price(
+                holding.ticker
+            )
+
+            metrics = calculate_holding_metrics(
+                quantity=holding.quantity,
+                purchase_price=holding.purchase_price,
+                current_price=current_price,
+            )
+
+        except ValueError as exc:
+            raise HTTPException(
+                status_code=422,
+                detail=str(exc),
+            ) from exc
 
         results.append({
             "ticker": holding.ticker.strip().upper(),
@@ -240,17 +253,21 @@ def analyse_portfolio(holdings: list[HoldingInput]):
     total_profit_loss = total_current_value - total_invested
 
     total_return_pct = (
-        (total_profit_loss / total_invested) * 100
-        if total_invested > 0
-        else 0
-    )
+        total_profit_loss / total_invested
+    ) * 100
 
     return {
         "holdings": results,
         "summary": {
             "total_invested": round(total_invested, 2),
-            "total_current_value": round(total_current_value, 2),
-            "total_profit_loss": round(total_profit_loss, 2),
-            "total_return_pct": round(total_return_pct, 2),
+            "total_current_value": round(
+                total_current_value, 2
+            ),
+            "total_profit_loss": round(
+                total_profit_loss, 2
+            ),
+            "total_return_pct": round(
+                total_return_pct, 2
+            ),
         },
     }

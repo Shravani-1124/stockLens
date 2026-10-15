@@ -1,4 +1,4 @@
-
+import yfinance as yf
 def calculate_holding_metrics(
     quantity: int,
     purchase_price: float,
@@ -35,3 +35,36 @@ def calculate_holding_metrics(
         "profit_loss": round(profit_loss, 2),
         "return_pct": round(return_percentage, 2),
     }
+
+def get_latest_stock_price(ticker: str) -> float:
+    """
+    Fetch the latest available closing price for a stock.
+    """
+    symbol = ticker.strip().upper()
+
+    if not symbol:
+        raise ValueError("Stock ticker cannot be empty.")
+
+    stock = yf.Ticker(symbol)
+    history = stock.history(period="5d")
+
+    if history.empty or "Close" not in history.columns:
+        raise ValueError(
+            f"No price data found for {symbol}."
+        )
+
+    closing_prices = history["Close"].dropna()
+
+    if closing_prices.empty:
+        raise ValueError(
+            f"No valid closing price found for {symbol}."
+        )
+
+    latest_price = float(closing_prices.iloc[-1])
+
+    if latest_price <= 0:
+        raise ValueError(
+            f"Invalid closing price returned for {symbol}."
+        )
+
+    return round(latest_price, 2)

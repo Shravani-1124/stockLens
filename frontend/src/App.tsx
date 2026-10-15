@@ -72,7 +72,6 @@ type PortfolioHoldingInput = {
   ticker: string;
   quantity: number;
   purchase_price: number;
-  current_price: number;
 };
 
 type PortfolioHolding = PortfolioHoldingInput & {
@@ -114,7 +113,7 @@ const [portfolio, setPortfolio] = useState<PortfolioResponse | null>(null);
 const [newTicker, setNewTicker] = useState("TCS.NS");
 const [newQuantity, setNewQuantity] = useState("10");
 const [newPurchasePrice, setNewPurchasePrice] = useState("");
-const [newCurrentPrice, setNewCurrentPrice] = useState("");
+
 
 const [portfolioLoading, setPortfolioLoading] = useState(false);
 const [portfolioError, setPortfolioError] = useState("");
@@ -125,13 +124,13 @@ const [ticker2, setTicker2] = useState("RELIANCE.NS");
 const [comparison, setComparison] =
   useState<ComparisonResponse | null>(null);
 
+
 function addHolding() {
   const symbol = newTicker.trim().toUpperCase();
   const quantity = Number(newQuantity);
   const purchasePrice = Number(newPurchasePrice);
-  const currentPrice = Number(newCurrentPrice);
 
-  if (!symbol || !newPurchasePrice || !newCurrentPrice) {
+  if (!symbol || !newPurchasePrice) {
     setPortfolioError("Please fill in all holding fields.");
     return;
   }
@@ -140,12 +139,10 @@ function addHolding() {
     !Number.isInteger(quantity) ||
     quantity <= 0 ||
     !Number.isFinite(purchasePrice) ||
-    purchasePrice <= 0 ||
-    !Number.isFinite(currentPrice) ||
-    currentPrice <= 0
+    purchasePrice <= 0
   ) {
     setPortfolioError(
-      "Enter a positive whole-number quantity and positive prices."
+      "Enter a positive whole-number quantity and positive purchase price."
     );
     return;
   }
@@ -156,7 +153,6 @@ function addHolding() {
       ticker: symbol,
       quantity,
       purchase_price: purchasePrice,
-      current_price: currentPrice,
     },
   ];
 
@@ -166,7 +162,6 @@ function addHolding() {
   setNewTicker("");
   setNewQuantity("10");
   setNewPurchasePrice("");
-  setNewCurrentPrice("");
 }
 
 
@@ -401,6 +396,7 @@ setDailyReturns(returnsResult.data);
       </header>
 
       <main className="main-content">
+        
 
 <section className="comparison-panel">
   <h2>Portfolio Analytics</h2>
@@ -444,19 +440,8 @@ setDailyReturns(returnsResult.data);
       />
     </div>
 
-    <div>
-      <label htmlFor="current-price">Current price (₹)</label>
-      <input
-        id="current-price"
-        type="number"
-        min="0.01"
-        step="any"
-        value={newCurrentPrice}
-        onChange={(event) => setNewCurrentPrice(event.target.value)}
-        placeholder="3500"
-      />
     </div>
-  </div>
+      
 
   <div className="search-row">
     <button onClick={addHolding}>Add holding</button>
@@ -484,7 +469,7 @@ setDailyReturns(returnsResult.data);
             <h3>{holding.ticker}</h3>
             <p>Quantity: {holding.quantity}</p>
             <p>Purchase price: ₹{holding.purchase_price.toLocaleString("en-IN")}</p>
-            <p>Current price: ₹{holding.current_price.toLocaleString("en-IN")}</p>
+           
             <button
               onClick={() => {
                 setHoldings(
