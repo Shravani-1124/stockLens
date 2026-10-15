@@ -2,6 +2,7 @@ from fastapi import FastAPI, HTTPException
 import yfinance as yf
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
+from app.analytics import router as analytics_router
 from app.portfolio import (
     calculate_holding_metrics,
     get_latest_stock_price,
@@ -20,6 +21,7 @@ app = FastAPI(
     description="A stock analysis and financial analytics platform.",
     version="0.1.0",
 )
+app.include_router(analytics_router)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["http://localhost:5173"],
