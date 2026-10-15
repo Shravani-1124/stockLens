@@ -46,6 +46,21 @@ type DailyReturnsResponse = {
   data: DailyReturnRecord[];
 };
 
+type ComparedStock = {
+  ticker: string;
+  start_price: number;
+  end_price: number;
+  period_return_pct: number;
+  annualised_volatility_pct: number;
+  max_drawdown_pct: number;
+};
+
+type ComparisonResponse = {
+  stock1: ComparedStock;
+  stock2: ComparedStock;
+};
+
+
 function App() {
   const [ticker, setTicker] = useState("TCS.NS");
   const [history, setHistory] = useState<PriceRecord[]>([]);
@@ -58,6 +73,59 @@ function App() {
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+
+
+const [ticker2, setTicker2] = useState("RELIANCE.NS");
+const [comparison, setComparison] =
+  useState<ComparisonResponse | null>(null);
+
+
+async function compareStocks() {
+  const symbol1 = ticker.trim().toUpperCase();
+  const symbol2 = ticker2.trim().toUpperCase();
+
+  if (!symbol1 || !symbol2) {
+    setError("Please enter both stock tickers.");
+    return;
+  }
+
+  if (symbol1 === symbol2) {
+    setError("Please enter two different stock tickers.");
+    return;
+  }
+
+  setLoading(true);
+  setError("");
+  setComparison(null);
+
+  try {
+    const params = new URLSearchParams({
+      ticker1: symbol1,
+      ticker2: symbol2,
+    });
+
+    const response = await fetch(
+      `http://127.0.0.1:8000/api/stocks/compare?${params}`
+    );
+
+    if (!response.ok) {
+      throw new Error("Could not compare these stocks.");
+    }
+
+    const result: ComparisonResponse = await response.json();
+    setComparison(result);
+  } catch (err) {
+    setError(
+      err instanceof Error
+        ? err.message
+        : "Something went wrong."
+    );
+  } finally {
+    setLoading(false);
+  }
+}
+
+
 
   async function analyseStock() {
     const symbol = ticker.trim().toUpperCase();
@@ -214,6 +282,73 @@ setDailyReturns(returnsResult.data);
             Try TCS.NS or RELIANCE.NS.
           </p>
         </section>
+
+<section className="comparison-panel">
+  <h2>Compare Stocks</h2>
+  <p className="hint">
+    Compare the performance and risk of two stocks.
+  </p>
+
+  <div className="comparison-inputs">
+    <div>
+      <label htmlFor="ticker-one">First stock</label>
+      <input
+        id="ticker-one"
+        value={ticker}
+        onChange={(event) => setTicker(event.target.value)}
+        placeholder="e.g. TCS.NS"
+      />
+    </div>
+
+    <div>
+      <label htmlFor="ticker-two">Second stock</label>
+      <input
+        id="ticker-two"
+        value={ticker2}
+        onChange={(event) => setTicker2(event.target.value)}
+        placeholder="e.g. RELIANCE.NS"
+      />
+    </div>
+  </div>
+
+  <button
+    onClick={compareStocks}
+    disabled={loading}
+  >
+    {loading ? "Comparing..." : "Compare stocks"}
+  </button>
+
+{comparison && (
+  <div className="comparison-results">
+    {[comparison.stock1, comparison.stock2].map((stock) => (
+      <div className="comparison-result-card" key={stock.ticker}>
+        <h3>{stock.ticker}</h3>
+
+        <div className="comparison-metric">
+          <span>Period Return</span>
+          <strong className={stock.period_return_pct >= 0 ? "positive" : "negative"}>
+            {stock.period_return_pct.toFixed(2)}%
+          </strong>
+        </div>
+
+        <div className="comparison-metric">
+          <span>Annualised Volatility</span>
+          <strong>{stock.annualised_volatility_pct.toFixed(2)}%</strong>
+        </div>
+
+        <div className="comparison-metric">
+          <span>Maximum Drawdown</span>
+          <strong className="negative">
+            {stock.max_drawdown_pct.toFixed(2)}%
+          </strong>
+        </div>
+      </div>
+    ))}
+  </div>
+)}
+
+</section>
+
 
         {error && (
           <div className="error-message" role="alert">

@@ -130,3 +130,48 @@ def get_daily_returns(ticker: str):
             for i in range(1, len(prices))
         ],
     }
+
+@app.get("/api/stocks/compare")
+def compare_stocks(ticker1: str, ticker2: str):
+    def analyse(ticker: str):
+        stock = yf.Ticker(ticker)
+        history = stock.history(period="1mo")
+
+        if history.empty:
+            raise HTTPException(
+                status_code=404,
+                detail=f"No historical data found for {ticker}.",
+            )
+
+        prices = history["Close"].dropna().tolist()
+
+        if len(prices) < 3:
+            raise HTTPException(
+                status_code=422,
+                detail=f"Not enough closing prices for {ticker}.",
+            )
+
+        daily_returns = calculate_daily_returns(prices)
+
+        return {
+            "ticker": ticker.upper(),
+            "start_price": round(prices[0], 2),
+            "end_price": round(prices[-1], 2),
+            "period_return_pct": round(
+                calculate_period_return(prices), 2
+            ),
+            "annualised_volatility_pct": round(
+                calculate_annualised_volatility(daily_returns), 2
+            ),
+            "max_drawdown_pct": round(
+                calculate_max_drawdown(prices), 2
+            ),
+        }
+
+    first_stock = analyse(ticker1.strip().upper())
+    second_stock = analyse(ticker2.strip().upper())
+
+    return {
+        "stock1": first_stock,
+        "stock2": second_stock,
+    }
