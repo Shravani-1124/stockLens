@@ -131,47 +131,74 @@ def get_daily_returns(ticker: str):
         ],
     }
 
+
 @app.get("/api/stocks/compare")
 def compare_stocks(ticker1: str, ticker2: str):
     def analyse(ticker: str):
-        stock = yf.Ticker(ticker)
+        symbol = ticker.strip().upper()
+
+        stock = yf.Ticker(symbol)
         history = stock.history(period="1mo")
 
         if history.empty:
             raise HTTPException(
                 status_code=404,
-                detail=f"No historical data found for {ticker}.",
+                detail=f"No historical data found for {symbol}.",
             )
 
-        prices = history["Close"].dropna().tolist()
+        history = history.dropna(subset=["Close"])
+
+        prices = history["Close"].tolist()
 
         if len(prices) < 3:
             raise HTTPException(
                 status_code=422,
-                detail=f"Not enough closing prices for {ticker}.",
+                detail=f"Not enough closing prices for {symbol}.",
             )
 
         daily_returns = calculate_daily_returns(prices)
+        period_return = calculate_period_return(prices)
+        volatility = calculate_annualised_volatility(
+            daily_returns
+        )
+        max_drawdown = calculate_max_drawdown(prices)
+
+        # Convert prices into an index starting at 100.
+        starting_price = prices[0]
+
+        normalised_data = [
+            {
+                "date": date.strftime("%Y-%m-%d"),
+                "normalised_price": round(
+                    (price / starting_price) * 100, 2
+                ),
+            }
+            for date, price in zip(history.index, prices)
+        ]
 
         return {
-            "ticker": ticker.upper(),
+            "ticker": symbol,
             "start_price": round(prices[0], 2),
             "end_price": round(prices[-1], 2),
-            "period_return_pct": round(
-                calculate_period_return(prices), 2
-            ),
+            "period_return_pct": round(period_return, 2),
             "annualised_volatility_pct": round(
-                calculate_annualised_volatility(daily_returns), 2
+                volatility, 2
             ),
-            "max_drawdown_pct": round(
-                calculate_max_drawdown(prices), 2
-            ),
+            "max_drawdown_pct": round(max_drawdown, 2),
+            "normalised_data": normalised_data,
         }
 
-    first_stock = analyse(ticker1.strip().upper())
-    second_stock = analyse(ticker2.strip().upper())
+    if ticker1.strip().upper() == ticker2.strip().upper():
+        raise HTTPException(
+            status_code=422,
+            detail="Please provide two different stock tickers.",
+        )
+
+    first_stock = analyse(ticker1)
+    second_stock = analyse(ticker2)
 
     return {
         "stock1": first_stock,
         "stock2": second_stock,
     }
+

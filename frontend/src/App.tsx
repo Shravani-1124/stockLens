@@ -11,6 +11,7 @@ import {
   Bar,
   BarChart,
   ReferenceLine,
+  Legend,
 } from "recharts";
 import "./App.css";
 
@@ -46,6 +47,12 @@ type DailyReturnsResponse = {
   data: DailyReturnRecord[];
 };
 
+
+type NormalisedPriceRecord = {
+  date: string;
+  normalised_price: number;
+};
+
 type ComparedStock = {
   ticker: string;
   start_price: number;
@@ -53,12 +60,14 @@ type ComparedStock = {
   period_return_pct: number;
   annualised_volatility_pct: number;
   max_drawdown_pct: number;
+  normalised_data: NormalisedPriceRecord[];
 };
 
 type ComparisonResponse = {
   stock1: ComparedStock;
   stock2: ComparedStock;
 };
+
 
 
 function App() {
@@ -94,6 +103,7 @@ async function compareStocks() {
     return;
   }
 
+
   setLoading(true);
   setError("");
   setComparison(null);
@@ -124,6 +134,29 @@ async function compareStocks() {
     setLoading(false);
   }
 }
+
+const comparisonChartData = comparison
+  ? Array.from(
+      new Set([
+        ...comparison.stock1.normalised_data.map(
+          (item) => item.date
+        ),
+        ...comparison.stock2.normalised_data.map(
+          (item) => item.date
+        ),
+      ])
+    )
+      .sort()
+      .map((date) => ({
+        date,
+        stock1: comparison.stock1.normalised_data.find(
+          (item) => item.date === date
+        )?.normalised_price,
+        stock2: comparison.stock2.normalised_data.find(
+          (item) => item.date === date
+        )?.normalised_price,
+      }))
+  : [];
 
 
 
@@ -319,6 +352,7 @@ setDailyReturns(returnsResult.data);
   </button>
 
 {comparison && (
+  <>
   <div className="comparison-results">
     {[comparison.stock1, comparison.stock2].map((stock) => (
       <div className="comparison-result-card" key={stock.ticker}>
@@ -345,7 +379,75 @@ setDailyReturns(returnsResult.data);
       </div>
     ))}
   </div>
+   
+<div className="normalised-chart">
+  <h3>Normalised Performance</h3>
+
+  <p className="hint">
+    Both stocks start at 100. Values above 100 indicate gains;
+    values below 100 indicate losses.
+  </p>
+
+  <div className="normalised-chart-container">
+    <ResponsiveContainer width="100%" height={320}>
+      <LineChart data={comparisonChartData}>
+        <CartesianGrid
+          strokeDasharray="3 3"
+          stroke="#293246"
+        />
+        <XAxis
+          dataKey="date"
+          stroke="#94a3b8"
+          tick={{ fontSize: 11 }}
+          minTickGap={30}
+        />
+        <YAxis
+          stroke="#94a3b8"
+          tick={{ fontSize: 11 }}
+          domain={["auto", "auto"]}
+        />
+        <Tooltip
+          formatter={(value, name) => [
+            value == null ? "No data" : Number(value).toFixed(2),
+            name,
+          ]}
+          contentStyle={{
+            backgroundColor: "#111722",
+            border: "1px solid #293246",
+            borderRadius: "8px",
+          }}
+        />
+        <Legend />
+        <ReferenceLine
+          y={100}
+          stroke="#94a3b8"
+          strokeDasharray="5 5"
+        />
+        <Line
+          type="monotone"
+          dataKey="stock1"
+          name={comparison.stock1.ticker}
+          stroke="#a5b4fc"
+          strokeWidth={2}
+          dot={false}
+          connectNulls
+        />
+        <Line
+          type="monotone"
+          dataKey="stock2"
+          name={comparison.stock2.ticker}
+          stroke="#4ade80"
+          strokeWidth={2}
+          dot={false}
+          connectNulls
+        />
+      </LineChart>
+    </ResponsiveContainer>
+  </div>
+</div>
+  </>
 )}
+
 
 </section>
 
