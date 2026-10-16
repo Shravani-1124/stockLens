@@ -11,7 +11,7 @@ import {
   Legend,
 } from "recharts";
 
-const API = "http://127.0.0.1:8000/api";
+const API = "https://stocklens-suj1.onrender.com/api";
 
 type RiskResult = {
   period: string;

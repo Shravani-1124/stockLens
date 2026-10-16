@@ -19,6 +19,7 @@ import {
 import "./App.css";
 import AnalyticsPanel from "./AnalyticsPanel";
 
+
 type PriceRecord = {
   Date: string;
   Close: number;
@@ -203,7 +204,7 @@ async function analysePortfolio() {
 
   try {
     const response = await fetch(
-      "http://127.0.0.1:8000/api/portfolio/analyse",
+      "https://stocklens-suj1.onrender.com/api/portfolio/analyse",
       {
         method: "POST",
         headers: {
@@ -256,7 +257,7 @@ async function compareStocks() {
     });
 
     const response = await fetch(
-      `http://127.0.0.1:8000/api/stocks/compare?${params}`
+      `https://stocklens-suj1.onrender.com/api/stocks/compare?${params}`
     );
 
     if (!response.ok) {
@@ -317,7 +318,7 @@ const comparisonChartData = comparison
     setDailyReturns([]);
     try {
       const response = await fetch(
-        `http://127.0.0.1:8000/api/stocks/${encodeURIComponent(symbol)}/history`
+        `https://stocklens-suj1.onrender.com/api/stocks/${encodeURIComponent(symbol)}/history`
       );
 
       if (!response.ok) {
@@ -355,7 +356,7 @@ try {
 
   // Performance fetch goes here!
   const performanceResponse = await fetch(
-    `http://127.0.0.1:8000/api/stocks/${encodeURIComponent(symbol)}/performance`
+    `https://stocklens-suj1.onrender.com/api/stocks/${encodeURIComponent(symbol)}/performance`
   );
 
   if (!performanceResponse.ok) {
@@ -381,7 +382,7 @@ try {
   setPerformance(performanceResult);
 
 const returnsResponse = await fetch(
-  `http://127.0.0.1:8000/api/stocks/${encodeURIComponent(symbol)}/daily-returns`
+  `https://stocklens-suj1.onrender.com/api/stocks/${encodeURIComponent(symbol)}/daily-returns`
 );
 
 if (!returnsResponse.ok) {
